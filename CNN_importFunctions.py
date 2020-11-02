@@ -8,23 +8,26 @@ import matplotlib.pyplot as plt
 
 
 
+def make_RGB(images):
+    """ Converts a grayscale image set into a RGB tensor """
+    img_x, img_y = images[0].shape
+    images = tf.constant(images.reshape(len(images), img_x, img_y, 1))
+    images = tf.image.grayscale_to_rgb(images)
+
+    return np.array(images, dtype=np.float)
+
+
+
+
 
 def load_MNIST_digits():
     """
     Load in MNIST digits set and convert to RGB tensors
-        - Have to change 
     """
-
-    def make_RGB(images):
-        """ Converts a grayscale image set into a RGB tensor """
-        img_x, img_y = images[0].shape
-        images = tf.constant(images.reshape(len(images), img_x, img_y, 1))
-        images = tf.image.grayscale_to_rgb(images)
-
-        return np.array(images, dtype=np.float)
-
-
     (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.mnist.load_data()
+
+    class_names = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
+
 
     # Change labels to follow CIFAR format --> list of lists containing single int each
     train_labels = np.array([[l] for l in train_labels])
@@ -44,7 +47,43 @@ def load_MNIST_digits():
     with open('MNIST_digits_test_data.pickle', 'wb') as handle:
         pickle.dump(test_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    return (train_images, train_labels), (test_images, test_labels)
+    return (train_images, train_labels), (test_images, test_labels), class_names
+
+
+
+
+
+def load_MNIST_fashion():
+    """
+    Load in MNIST fashion set and convert to RGB tensors
+    """
+    (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.fashion_mnist.load_data()
+
+    class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
+                   'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+
+    # Change labels to follow CIFAR format --> list of lists containing single int each
+    train_labels = np.array([[l] for l in train_labels])
+    test_labels = np.array([[l] for l in test_labels])
+
+    train_images = make_RGB(train_images)
+    test_images = make_RGB(test_images)
+
+    train_images, test_images = train_images / 255.0, test_images / 255.0
+
+    # Pickle list of lists containg each image and label pair
+    train_data = [(image, label) for image, label in zip(train_images, train_labels)]
+    test_data = [(image, label) for image, label in zip(test_images, test_labels)]
+
+    with open('MNIST_fashion_train_data.pickle', 'wb') as handle:
+        pickle.dump(train_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open('MNIST_fashion_test_data.pickle', 'wb') as handle:
+        pickle.dump(test_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    return (train_images, train_labels), (test_images, test_labels), class_names
+
+
+
 
 
 
@@ -57,7 +96,9 @@ def load_CIFAR():
     """
     (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.cifar10.load_data()
 
-    # Scale images
+    class_names = np.array(['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck'])
+
+    # Scale pixel data
     train_images, test_images = train_images / 255.0, test_images / 255.0
 
     # Pickle list of lists containng each image and label pair
@@ -69,7 +110,7 @@ def load_CIFAR():
     with open('CIFAR_test_data.pickle', 'wb') as handle:
         pickle.dump(test_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    return (train_images, train_labels), (test_images, test_labels)
+    return (train_images, train_labels), (test_images, test_labels), class_names
 
 
 
@@ -118,25 +159,23 @@ def import_data(filename):
 
 
 
-def import_MNIST_digits(train_filename, test_filename):
-    """
-    Load MNIST digits data from file to avoid downloading again
-    """
+def import_saved_data(train_filename, test_filename, data_type):
     train_images, train_labels = import_data(train_filename)
     test_images, test_labels = import_data(test_filename)
 
-    return (train_images, train_labels), (test_images, test_labels)
+    if data_type == 'CIFAR':
+        class_names = ['Airplane', 'Automobile', 'Bird', 'Cat', 'Deer', 'Dog', 'Frog', 'Horse', 'Ship', 'Truck']
+
+    elif data_type == 'Digits':
+        class_names = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
+
+    elif data_type == 'Fashion':
+        class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
+                       'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
 
 
+    return (train_images, train_labels), (test_images, test_labels), class_names
 
-def import_CIFAR(train_filename, test_filename):
-    """
-    Load CIFAR data from file to avoid downloading again
-    """
-    train_images, train_labels = import_data(train_filename)
-    test_images, test_labels = import_data(test_filename)
-
-    return (train_images, train_labels), (test_images, test_labels)
 
 
 
@@ -146,8 +185,8 @@ def show_sample_data(images, labels, class_names):
     Show a plot of sample data taken from the set
     """
     plt.figure(figsize=(10,10))
+    plt.title('Selection of Sample Data')
     for i in range(10):
-        plt.title('Selection of Sample Data')
         plt.subplot(2,5,i+1)
         plt.xticks([])
         plt.yticks([])
